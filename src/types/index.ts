@@ -44,7 +44,7 @@ export interface OrderFilterQuery extends PaginationQuery {
     customerEmail?: string;
 }
 
-export interface CreateEventDTD {
+export interface CreateEventDTO {
     title: string;
     description: string;
     venue: string;
@@ -71,7 +71,7 @@ export interface CreateTicketTypeDTO {
 }
 
 
-export interface CreateProductDTD {
+export interface CreateProductDTO {
     name: string;
     description: string;
     price: number;
