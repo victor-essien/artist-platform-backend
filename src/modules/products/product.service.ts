@@ -1,15 +1,18 @@
-import { prisma } from "../../utils/database";
+import { prisma } from "../../config/database";
 import { AppError } from "../../utils/error";
 import { CreateProductDTO, ProductFilterQuery } from "../../types";
-import { paginate, createPaginationMeta, generateSKU } from "../../utils/helper";
+import {
+  paginate,
+  createPaginationMeta,
+  generateSKU,
+} from "../../utils/helper";
 
 export class ProductService {
-
-    async createProduct(data:CreateProductDTO, createdById: string) {
-          const { variants, ...productData } = data;
+  async createProduct(data: CreateProductDTO, createdById: string) {
+    const { variants, ...productData } = data;
 
     // Generate SKU if not provided
-    const sku = data.sku || generateSKU('PROD');
+    const sku = data.sku || generateSKU("PROD");
 
     const createData: any = {
       ...productData,
@@ -21,7 +24,7 @@ export class ProductService {
       createData.variants = {
         create: variants.map((v) => ({
           name: v.name,
-          sku: v.sku || generateSKU('VAR'),
+          sku: v.sku || generateSKU("VAR"),
           price: v.price,
           stock: v.stock,
         })),
@@ -43,12 +46,11 @@ export class ProductService {
     });
 
     return product;
-    }
+  }
 
-
-    async getProducts(query: ProductFilterQuery) {
-    const page = parseInt(query.page || '1');
-    const limit = parseInt(query.limit || '20');
+  async getProducts(query: ProductFilterQuery) {
+    const page = parseInt(query.page || "1");
+    const limit = parseInt(query.limit || "20");
     const { skip, take } = paginate(page, limit);
 
     const where: any = { isActive: true };
@@ -67,7 +69,7 @@ export class ProductService {
       }
     }
 
-    if (query.inStock === 'true') {
+    if (query.inStock === "true") {
       where.stock = { gt: 0 };
     }
 
@@ -86,7 +88,7 @@ export class ProductService {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       }),
       prisma.product.count({ where }),
     ]);
@@ -118,7 +120,7 @@ export class ProductService {
     });
 
     if (!product) {
-      throw new AppError('Product not found', 404);
+      throw new AppError("Product not found", 404);
     }
 
     return product;
@@ -130,7 +132,7 @@ export class ProductService {
     });
 
     if (!product) {
-      throw new AppError('Product not found', 404);
+      throw new AppError("Product not found", 404);
     }
 
     const { variants, ...productData } = data;
@@ -155,7 +157,7 @@ export class ProductService {
     });
 
     if (!product) {
-      throw new AppError('Product not found', 404);
+      throw new AppError("Product not found", 404);
     }
 
     if (product.orderItems.length > 0) {
@@ -164,14 +166,14 @@ export class ProductService {
         where: { id },
         data: { isActive: false },
       });
-      return { message: 'Product deactivated (has existing orders)' };
+      return { message: "Product deactivated (has existing orders)" };
     }
 
     await prisma.product.delete({
       where: { id },
     });
 
-    return { message: 'Product deleted successfully' };
+    return { message: "Product deleted successfully" };
   }
 
   async updateStock(id: string, quantity: number, variantId?: string) {
@@ -197,14 +199,14 @@ export class ProductService {
     });
 
     if (!product) {
-      throw new AppError('Product not found', 404);
+      throw new AppError("Product not found", 404);
     }
 
     const variant = await prisma.productVariant.create({
       data: {
         ...data,
         productId,
-        sku: data.sku || generateSKU('VAR'),
+        sku: data.sku || generateSKU("VAR"),
       },
     });
 
@@ -229,7 +231,7 @@ export class ProductService {
     });
 
     if (!variant) {
-      throw new AppError('Variant not found', 404);
+      throw new AppError("Variant not found", 404);
     }
 
     if (variant.orderItems.length > 0) {
@@ -238,14 +240,14 @@ export class ProductService {
         where: { id },
         data: { isActive: false },
       });
-      return { message: 'Variant deactivated (has existing orders)' };
+      return { message: "Variant deactivated (has existing orders)" };
     }
 
     await prisma.productVariant.delete({
       where: { id },
     });
 
-    return { message: 'Variant deleted successfully' };
+    return { message: "Variant deleted successfully" };
   }
 
   async getFeaturedProducts(limit: number = 10) {
@@ -268,7 +270,7 @@ export class ProductService {
 
   async getCategories() {
     const categories = await prisma.product.groupBy({
-      by: ['category'],
+      by: ["category"],
       where: { isActive: true },
       _count: {
         category: true,
@@ -294,21 +296,21 @@ export class ProductService {
     });
 
     if (!product) {
-      throw new AppError('Product not found', 404);
+      throw new AppError("Product not found", 404);
     }
 
     const validOrderItems = product.orderItems.filter(
-      (item) => !['CANCELLED', 'REFUNDED'].includes(item.order.status)
+      (item) => !["CANCELLED", "REFUNDED"].includes(item.order.status),
     );
 
     const totalSold = validOrderItems.reduce(
       (sum, item) => sum + item.quantity,
-      0
+      0,
     );
 
     const totalRevenue = validOrderItems.reduce(
       (sum, item) => sum + parseFloat(item.totalPrice.toString()),
-      0
+      0,
     );
 
     return {

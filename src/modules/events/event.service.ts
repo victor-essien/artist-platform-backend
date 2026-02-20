@@ -1,14 +1,17 @@
-import { prisma } from "../../utils/database";
+import { prisma } from "../../config/database";
 import { AppError } from "../../utils/error";
 import { CreateEventDTO, EventFilterQuery } from "../../types";
-import { paginate, createPaginationMeta, isUpcomingEvent } from "../../utils/helper";
+import {
+  paginate,
+  createPaginationMeta,
+  isUpcomingEvent,
+} from "../../utils/helper";
 import { EventStatus } from "../../generated/prisma/enums";
 
 export class EventService {
-
-    async createEvent(data: CreateEventDTO, createdById: string) {
-        const {ticketTypes, ...eventData} = data;
-const event = await prisma.event.create({
+  async createEvent(data: CreateEventDTO, createdById: string) {
+    const { ticketTypes, ...eventData } = data;
+    const event = await prisma.event.create({
       data: {
         ...eventData,
         createdById,
@@ -37,12 +40,11 @@ const event = await prisma.event.create({
     });
 
     return event;
+  }
 
-    }
-
-    async getEvents(query: EventFilterQuery) {
-    const page = parseInt(query.page || '1');
-    const limit = parseInt(query.limit || '10');
+  async getEvents(query: EventFilterQuery) {
+    const page = parseInt(query.page || "1");
+    const limit = parseInt(query.limit || "10");
     const { skip, take } = paginate(page, limit);
 
     const where: any = {};
@@ -54,7 +56,7 @@ const event = await prisma.event.create({
     if (query.city) {
       where.city = {
         contains: query.city,
-        mode: 'insensitive',
+        mode: "insensitive",
       };
     }
 
@@ -90,7 +92,7 @@ const event = await prisma.event.create({
             },
           },
         },
-        orderBy: { date: 'asc' },
+        orderBy: { date: "asc" },
       }),
       prisma.event.count({ where }),
     ]);
@@ -122,21 +124,20 @@ const event = await prisma.event.create({
     });
 
     if (!event) {
-      throw new AppError('Event not found', 404);
+      throw new AppError("Event not found", 404);
     }
 
     return event;
   }
 
-
-                    // ADMIN ROLES
-async updateEvent(id: string, data: Partial<CreateEventDTO>) {
+  // ADMIN ROLES
+  async updateEvent(id: string, data: Partial<CreateEventDTO>) {
     const event = await prisma.event.findUnique({
       where: { id },
     });
 
     if (!event) {
-      throw new AppError('Event not found', 404);
+      throw new AppError("Event not found", 404);
     }
 
     const { ticketTypes, ...eventData } = data;
@@ -161,18 +162,18 @@ async updateEvent(id: string, data: Partial<CreateEventDTO>) {
     });
 
     if (!event) {
-      throw new AppError('Event not found', 404);
+      throw new AppError("Event not found", 404);
     }
 
     if (event.orders.length > 0) {
-      throw new AppError('Cannot delete event with existing orders', 400);
+      throw new AppError("Cannot delete event with existing orders", 400);
     }
 
     await prisma.event.delete({
       where: { id },
     });
 
-    return { message: 'Event deleted successfully' };
+    return { message: "Event deleted successfully" };
   }
 
   async publishEvent(id: string) {
@@ -181,12 +182,12 @@ async updateEvent(id: string, data: Partial<CreateEventDTO>) {
     });
 
     if (!event) {
-      throw new AppError('Event not found', 404);
+      throw new AppError("Event not found", 404);
     }
 
     const updatedEvent = await prisma.event.update({
       where: { id },
-      data: { status: 'PUBLISHED' },
+      data: { status: "PUBLISHED" },
     });
 
     return updatedEvent;
@@ -199,7 +200,7 @@ async updateEvent(id: string, data: Partial<CreateEventDTO>) {
         orders: {
           where: {
             status: {
-              notIn: ['CANCELLED', 'REFUNDED'],
+              notIn: ["CANCELLED", "REFUNDED"],
             },
           },
         },
@@ -207,24 +208,24 @@ async updateEvent(id: string, data: Partial<CreateEventDTO>) {
     });
 
     if (!event) {
-      throw new AppError('Event not found', 404);
+      throw new AppError("Event not found", 404);
     }
 
     await prisma.$transaction([
       prisma.event.update({
         where: { id },
-        data: { status: 'CANCELLED' },
+        data: { status: "CANCELLED" },
       }),
       prisma.order.updateMany({
         where: {
           eventId: id,
           status: {
-            notIn: ['CANCELLED', 'REFUNDED'],
+            notIn: ["CANCELLED", "REFUNDED"],
           },
         },
         data: {
-          status: 'CANCELLED',
-          paymentStatus: 'REFUNDED',
+          status: "CANCELLED",
+          paymentStatus: "REFUNDED",
         },
       }),
       prisma.ticket.updateMany({
@@ -234,12 +235,12 @@ async updateEvent(id: string, data: Partial<CreateEventDTO>) {
           },
         },
         data: {
-          status: 'CANCELLED',
+          status: "CANCELLED",
         },
       }),
     ]);
 
-    return { message: 'Event cancelled and orders refunded' };
+    return { message: "Event cancelled and orders refunded" };
   }
 
   async getEventStats(id: string) {
@@ -250,7 +251,7 @@ async updateEvent(id: string, data: Partial<CreateEventDTO>) {
         orders: {
           where: {
             status: {
-              notIn: ['CANCELLED', 'REFUNDED'],
+              notIn: ["CANCELLED", "REFUNDED"],
             },
           },
         },
@@ -258,17 +259,17 @@ async updateEvent(id: string, data: Partial<CreateEventDTO>) {
     });
 
     if (!event) {
-      throw new AppError('Event not found', 404);
+      throw new AppError("Event not found", 404);
     }
 
     const totalTicketsSold = event.ticketTypes.reduce(
       (sum, tt) => sum + tt.sold,
-      0
+      0,
     );
 
     const totalRevenue = event.orders.reduce(
       (sum, order) => sum + parseFloat(order.total.toString()),
-      0
+      0,
     );
 
     const ticketTypeStats = event.ticketTypes.map((tt) => ({
@@ -294,7 +295,7 @@ async updateEvent(id: string, data: Partial<CreateEventDTO>) {
     });
 
     if (!event) {
-      throw new AppError('Event not found', 404);
+      throw new AppError("Event not found", 404);
     }
 
     const ticketType = await prisma.ticketType.create({
@@ -325,18 +326,17 @@ async updateEvent(id: string, data: Partial<CreateEventDTO>) {
     });
 
     if (!ticketType) {
-      throw new AppError('Ticket type not found', 404);
+      throw new AppError("Ticket type not found", 404);
     }
 
     if (ticketType.tickets.length > 0) {
-      throw new AppError('Cannot delete ticket type with sold tickets', 400);
+      throw new AppError("Cannot delete ticket type with sold tickets", 400);
     }
 
     await prisma.ticketType.delete({
       where: { id },
     });
 
-    return { message: 'Ticket type deleted successfully' };
+    return { message: "Ticket type deleted successfully" };
   }
-
 }
