@@ -17,16 +17,8 @@ export class OrderService {
     // Validate and calculate for merch items
     if (data.items && data.items.length > 0) {
       for (const item of data.items) {
-        const productInclude: any = {};
-        if (item.productVariantId) {
-          productInclude.variants = {
-            where: { id: item.productVariantId },
-          };
-        }
-
         const product = await prisma.product.findUnique({
           where: { id: item.productId },
-          include: productInclude,
         });
 
         if (!product || !product.isActive) {
@@ -34,20 +26,20 @@ export class OrderService {
         }
 
         // Check stock
+        let price = product.price;
         if (item.productVariantId) {
-          const variant = product.variants?.[0];
+          const variant = await prisma.productVariant.findUnique({
+            where: { id: item.productVariantId },
+          });
           if (!variant || variant.stock < item.quantity) {
             throw new AppError(`Insufficient stock for ${product.name}`, 400);
           }
+          price = variant.price || product.price;
         } else {
           if (product.stock < item.quantity) {
             throw new AppError(`Insufficient stock for ${product.name}`, 400);
           }
         }
-
-        const price = item.productVariantId
-          ? product.variants?.[0]?.price || product.price
-          : product.price;
 
         subtotal += parseFloat(price.toString()) * item.quantity;
       }
@@ -121,51 +113,52 @@ export class OrderService {
 
     // Create order with all related records
     const order = await prisma.$transaction(async (tx) => {
+      const orderData: any = {
+        orderNumber,
+        customerEmail: data.customerEmail.toLowerCase(),
+        customerName: data.customerName,
+        customerPhone: data.customerPhone,
+        orderType: data.orderType,
+        shippingAddress: data.shippingAddress?.address,
+        shippingCity: data.shippingAddress?.city,
+        shippingState: data.shippingAddress?.state,
+        shippingZip: data.shippingAddress?.zip,
+        shippingCountry: data.shippingAddress?.country,
+        subtotal,
+        shippingFee,
+        tax,
+        total,
+        paymentMethod: data.paymentMethod,
+        status: 'PENDING',
+        paymentStatus: 'PENDING',
+      };
+
+      if (data.eventId) {
+        orderData.eventId = data.eventId;
+      }
+
       const newOrder = await tx.order.create({
-        data: {
-          orderNumber,
-          customerEmail: data.customerEmail.toLowerCase(),
-          customerName: data.customerName,
-          customerPhone: data.customerPhone,
-          orderType: data.orderType,
-          eventId: data.eventId,
-          shippingAddress: data.shippingAddress?.address,
-          shippingCity: data.shippingAddress?.city,
-          shippingState: data.shippingAddress?.state,
-          shippingZip: data.shippingAddress?.zip,
-          shippingCountry: data.shippingAddress?.country,
-          subtotal,
-          shippingFee,
-          tax,
-          total,
-          paymentMethod: data.paymentMethod,
-          status: 'PENDING',
-          paymentStatus: 'PENDING',
-        },
+        data: orderData,
       });
 
       // Create order items for merch
       if (data.items && data.items.length > 0) {
         for (const item of data.items) {
-          const productInclude: any = {};
-          if (item.productVariantId) {
-            productInclude.variants = {
-              where: { id: item.productVariantId },
-            };
-          }
-
           const product = await tx.product.findUnique({
             where: { id: item.productId },
-            include: productInclude,
           });
 
           if (!product) {
             throw new AppError('Product not found', 404);
           }
 
-          const price = item.productVariantId
-            ? product.variants?.[0]?.price || product.price
-            : product.price;
+          let price = product.price;
+          if (item.productVariantId) {
+            const variant = await tx.productVariant.findUnique({
+              where: { id: item.productVariantId },
+            });
+            price = variant?.price || product.price;
+          }
 
           await tx.orderItem.create({
             data: {
