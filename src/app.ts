@@ -44,11 +44,11 @@ app.get('/', (req, res) => {
 });
 
 // API Routes
-app.use('/admin', adminRouter);
-app.use('/events', eventRouter);
-app.use('/products', productRouter);
-app.use('/orders', orderRouter);
-app.use('/analytics', analyticsRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/events', eventRouter);
+app.use('/api/products', productRouter);
+app.use('/api/orders', orderRouter);
+app.use('/api/analytics', analyticsRouter);
 
 app.use(notFound);
 app.use(errorHandler);
