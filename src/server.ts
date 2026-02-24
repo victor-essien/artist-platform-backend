@@ -1,8 +1,12 @@
 import app from './app';
+import logger from './utils/logger';
 
 const PORT = process.env.PORT || 4000;
 
 
+// Start server
 app.listen(PORT, () => {
-    console.log(`Server is listening on port ${PORT}`);
-    }   );
+  logger.info(`🚀 Server is running on port ${PORT}`);
+  logger.info(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info(`🔗 Health check: http://localhost:${PORT}/health`);
+});

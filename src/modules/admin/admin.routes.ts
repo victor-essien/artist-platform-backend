@@ -57,3 +57,6 @@ adminRouter.get(
 );
 
 adminRouter.get('/activity-logs', authenticate, adminController.getActivityLogs.bind(adminController));
+
+
+export default adminRouter;
