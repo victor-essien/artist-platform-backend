@@ -100,6 +100,7 @@ model TicketType {
   maxPerOrder Int      @default(10)
   salesStart  DateTime?
   salesEnd    DateTime?
+  imageUrl    String?  // ⭐ NEW: Cloudinary image URL for ticket type
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
