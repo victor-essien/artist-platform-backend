@@ -42,7 +42,7 @@ app.get('/health', (req, res) => {
 app.get('/', (req, res) => {
   res.status(200).send('Artist Platform API!');
 });
-
+ 
 // API Routes
 app.use('/api/admin', adminRouter);
 app.use('/api/events', eventRouter);
