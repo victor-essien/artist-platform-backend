@@ -1,0 +1,1535 @@
+openapi: 3.0.3
+info:
+  title: Artist Platform API
+  description: |
+    Complete backend API for an artist platform featuring ticketing system, merchandise store, and admin panel.
+    
+    ## Features
+    - **Ticketing System**: Event management with QR codes
+    - **Merch Store**: Product catalog with variants
+    - **Admin Panel**: JWT authentication with role-based access
+    - **Image Uploads**: Cloudinary integration
+    - **No Buyer Registration**: Email-only purchases
+    - **Analytics**: Comprehensive reporting
+    
+    ## Authentication
+    Most endpoints require JWT authentication. Include the token in the Authorization header:
+    ```
+    Authorization: Bearer <your-jwt-token>
+    ```
+    
+    Obtain a token by logging in at `/api/admin/login`.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@artistplatform.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+  - url: https://api.artistplatform.com/api
+    description: Production server
+
+tags:
+  - name: Admin
+    description: Admin authentication and management
+  - name: Events
+    description: Event and ticketing operations
+  - name: Products
+    description: Merchandise store operations
+  - name: Orders
+    description: Order management
+  - name: Analytics
+    description: Analytics and reporting
+  - name: Upload
+    description: Image upload operations
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login endpoint
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Error message"
+        status:
+          type: integer
+          example: 400
+
+    ValidationError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Validation failed"
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              msg:
+                type: string
+              param:
+                type: string
+              location:
+                type: string
+
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 100
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        totalPages:
+          type: integer
+          example: 5
+        hasNext:
+          type: boolean
+          example: true
+        hasPrev:
+          type: boolean
+          example: false
+
+    Admin:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [SUPER_ADMIN, ADMIN, MODERATOR]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        venue:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        country:
+          type: string
+        date:
+          type: string
+          format: date-time
+        startTime:
+          type: string
+          example: "19:00"
+        endTime:
+          type: string
+          example: "23:00"
+        imageUrl:
+          type: string
+          format: uri
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED, CANCELLED, COMPLETED]
+        totalSeats:
+          type: integer
+        createdById:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        ticketTypes:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketType'
+
+    TicketType:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: decimal
+        quantity:
+          type: integer
+        sold:
+          type: integer
+        maxPerOrder:
+          type: integer
+        salesStart:
+          type: string
+          format: date-time
+        salesEnd:
+          type: string
+          format: date-time
+        imageUrl:
+          type: string
+          format: uri
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: decimal
+        imageUrl:
+          type: string
+          format: uri
+        category:
+          type: string
+        stock:
+          type: integer
+        sku:
+          type: string
+        isActive:
+          type: boolean
+        isFeatured:
+          type: boolean
+        weight:
+          type: number
+          format: decimal
+        createdById:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariant'
+
+    ProductVariant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sku:
+          type: string
+        price:
+          type: number
+          format: decimal
+        stock:
+          type: integer
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderNumber:
+          type: string
+        customerEmail:
+          type: string
+          format: email
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        orderType:
+          type: string
+          enum: [TICKET, MERCH, MIXED]
+        eventId:
+          type: string
+          format: uuid
+        shippingAddress:
+          type: string
+        shippingCity:
+          type: string
+        shippingState:
+          type: string
+        shippingZip:
+          type: string
+        shippingCountry:
+          type: string
+        subtotal:
+          type: number
+          format: decimal
+        shippingFee:
+          type: number
+          format: decimal
+        tax:
+          type: number
+          format: decimal
+        total:
+          type: number
+          format: decimal
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED, REFUNDED]
+        paymentStatus:
+          type: string
+          enum: [PENDING, COMPLETED, FAILED, REFUNDED, PARTIALLY_REFUNDED]
+        paymentMethod:
+          type: string
+        paymentIntentId:
+          type: string
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+paths:
+  # ==================== ADMIN ENDPOINTS ====================
+  /admin/login:
+    post:
+      tags:
+        - Admin
+      summary: Admin login
+      description: Authenticate admin and receive JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@artistplatform.com
+                password:
+                  type: string
+                  format: password
+                  example: SuperAdmin123!
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      admin:
+                        $ref: '#/components/schemas/Admin'
+                      token:
+                        type: string
+                        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/register:
+    post:
+      tags:
+        - Admin
+      summary: Register new admin
+      description: Create new admin account (SUPER_ADMIN only)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - name
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                name:
+                  type: string
+                role:
+                  type: string
+                  enum: [SUPER_ADMIN, ADMIN, MODERATOR]
+                  default: ADMIN
+      responses:
+        '201':
+          description: Admin created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      admin:
+                        $ref: '#/components/schemas/Admin'
+                      token:
+                        type: string
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/profile:
+    get:
+      tags:
+        - Admin
+      summary: Get admin profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Admin'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Admin
+      summary: Update admin profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Admin'
+
+  /admin/change-password:
+    put:
+      tags:
+        - Admin
+      summary: Change password
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - oldPassword
+                - newPassword
+              properties:
+                oldPassword:
+                  type: string
+                  format: password
+                newPassword:
+                  type: string
+                  format: password
+                  minLength: 8
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+
+  # ==================== EVENT ENDPOINTS ====================
+  /events:
+    get:
+      tags:
+        - Events
+      summary: Get all events
+      description: Retrieve paginated list of events with optional filters
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [DRAFT, PUBLISHED, CANCELLED, COMPLETED]
+        - name: city
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Events retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      events:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Event'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags:
+        - Events
+      summary: Create new event
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+                - venue
+                - address
+                - city
+                - country
+                - date
+                - startTime
+                - totalSeats
+                - ticketTypes
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                venue:
+                  type: string
+                address:
+                  type: string
+                city:
+                  type: string
+                state:
+                  type: string
+                country:
+                  type: string
+                date:
+                  type: string
+                  format: date
+                startTime:
+                  type: string
+                endTime:
+                  type: string
+                imageUrl:
+                  type: string
+                  format: uri
+                totalSeats:
+                  type: integer
+                ticketTypes:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - name
+                      - price
+                      - quantity
+                    properties:
+                      name:
+                        type: string
+                      description:
+                        type: string
+                      price:
+                        type: number
+                      quantity:
+                        type: integer
+                      maxPerOrder:
+                        type: integer
+                      salesStart:
+                        type: string
+                        format: date-time
+                      salesEnd:
+                        type: string
+                        format: date-time
+                      imageUrl:
+                        type: string
+                        format: uri
+      responses:
+        '201':
+          description: Event created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Event'
+
+  /events/{id}:
+    get:
+      tags:
+        - Events
+      summary: Get event by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Event'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Events
+      summary: Update event
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                venue:
+                  type: string
+                imageUrl:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: Event updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Event'
+
+    delete:
+      tags:
+        - Events
+      summary: Delete event
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+
+  /events/{id}/publish:
+    post:
+      tags:
+        - Events
+      summary: Publish event
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event published successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Event'
+
+  /events/{id}/cancel:
+    post:
+      tags:
+        - Events
+      summary: Cancel event and refund orders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+
+  /events/{id}/stats:
+    get:
+      tags:
+        - Events
+      summary: Get event statistics
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      totalTicketsSold:
+                        type: integer
+                      totalRevenue:
+                        type: number
+                      totalSeats:
+                        type: integer
+                      occupancyRate:
+                        type: number
+                      ticketTypes:
+                        type: array
+                        items:
+                          type: object
+
+  # ==================== PRODUCT ENDPOINTS ====================
+  /products:
+    get:
+      tags:
+        - Products
+      summary: Get all products
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: minPrice
+          in: query
+          schema:
+            type: number
+        - name: maxPrice
+          in: query
+          schema:
+            type: number
+        - name: inStock
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Products retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      products:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Product'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags:
+        - Products
+      summary: Create new product
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - description
+                - price
+                - category
+                - stock
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                price:
+                  type: number
+                imageUrl:
+                  type: string
+                  format: uri
+                category:
+                  type: string
+                stock:
+                  type: integer
+                sku:
+                  type: string
+                weight:
+                  type: number
+                variants:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      sku:
+                        type: string
+                      price:
+                        type: number
+                      stock:
+                        type: integer
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Product'
+
+  /products/featured:
+    get:
+      tags:
+        - Products
+      summary: Get featured products
+      responses:
+        '200':
+          description: Featured products retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+
+  /products/categories:
+    get:
+      tags:
+        - Products
+      summary: Get product categories
+      responses:
+        '200':
+          description: Categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        count:
+                          type: integer
+
+  # ==================== ORDER ENDPOINTS ====================
+  /orders:
+    get:
+      tags:
+        - Orders
+      summary: Get all orders (Admin)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: orderType
+          in: query
+          schema:
+            type: string
+            enum: [TICKET, MERCH, MIXED]
+        - name: customerEmail
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Orders retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      orders:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Order'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags:
+        - Orders
+      summary: Create new order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customerEmail
+                - customerName
+                - orderType
+                - paymentMethod
+              properties:
+                customerEmail:
+                  type: string
+                  format: email
+                customerName:
+                  type: string
+                customerPhone:
+                  type: string
+                orderType:
+                  type: string
+                  enum: [TICKET, MERCH, MIXED]
+                eventId:
+                  type: string
+                  format: uuid
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      productId:
+                        type: string
+                        format: uuid
+                      productVariantId:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: integer
+                tickets:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      ticketTypeId:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: integer
+                shippingAddress:
+                  type: object
+                  properties:
+                    address:
+                      type: string
+                    city:
+                      type: string
+                    state:
+                      type: string
+                    zip:
+                      type: string
+                    country:
+                      type: string
+                paymentMethod:
+                  type: string
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Order'
+
+  /orders/number/{orderNumber}:
+    get:
+      tags:
+        - Orders
+      summary: Get order by order number
+      parameters:
+        - name: orderNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Order'
+
+  /orders/customer/{email}:
+    get:
+      tags:
+        - Orders
+      summary: Get customer orders by email
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: Orders retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+
+  # ==================== ANALYTICS ENDPOINTS ====================
+  /analytics/dashboard:
+    get:
+      tags:
+        - Analytics
+      summary: Get dashboard statistics
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Dashboard stats retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      currentMonth:
+                        type: object
+                      lastMonth:
+                        type: object
+                      growth:
+                        type: object
+                      upcomingEvents:
+                        type: integer
+                      lowStockProducts:
+                        type: integer
+
+  /analytics/sales:
+    get:
+      tags:
+        - Analytics
+      summary: Get sales metrics
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Sales metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      totalRevenue:
+                        type: number
+                      totalOrders:
+                        type: integer
+                      totalTicketsSold:
+                        type: integer
+                      totalMerchSold:
+                        type: integer
+                      averageOrderValue:
+                        type: number
+
+  # ==================== UPLOAD ENDPOINTS ====================
+  /upload/event-image:
+    post:
+      tags:
+        - Upload
+      summary: Upload event image
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - image
+                - eventId
+              properties:
+                image:
+                  type: string
+                  format: binary
+                eventId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Image uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      imageUrl:
+                        type: string
+                        format: uri
+                      message:
+                        type: string
+
+  /upload/product-image:
+    post:
+      tags:
+        - Upload
+      summary: Upload product image
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - image
+                - productId
+              properties:
+                image:
+                  type: string
+                  format: binary
+                productId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Image uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      imageUrl:
+                        type: string
+                        format: uri
+                      message:
+                        type: string
+
+  /upload/ticket-image:
+    post:
+      tags:
+        - Upload
+      summary: Upload ticket type image
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - image
+                - ticketTypeId
+              properties:
+                image:
+                  type: string
+                  format: binary
+                ticketTypeId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Image uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      imageUrl:
+                        type: string
+                        format: uri
+                      message:
+                        type: string
+
+  /upload/image:
+    post:
+      tags:
+        - Upload
+      summary: Upload general image
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - image
+              properties:
+                image:
+                  type: string
+                  format: binary
+                folder:
+                  type: string
+                  description: Optional Cloudinary folder path
+      responses:
+        '200':
+          description: Image uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      imageUrl:
+                        type: string
+                        format: uri
+                      publicId:
+                        type: string
+                      width:
+                        type: integer
+                      height:
+                        type: integer
+                      format:
+                        type: string
+                      message:
+                        type: string
+
+    delete:
+      tags:
+        - Upload
+      summary: Delete image from Cloudinary
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - imageUrl
+              properties:
+                imageUrl:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: Image deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
