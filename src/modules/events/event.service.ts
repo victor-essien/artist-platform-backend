@@ -6,7 +6,7 @@ import {
   createPaginationMeta,
   isUpcomingEvent,
 } from "../../utils/helper";
-import { EventStatus } from "../../generated/prisma/enums";
+import { EventStatus } from "../../generated/prisma";
 
 export class EventService {
   async createEvent(data: CreateEventDTO, createdById: string) {

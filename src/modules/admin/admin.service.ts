@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import { prisma } from "../../config/database";
 import { generateToken } from "../../utils/jwt";
 import { AppError } from "../../utils/error";
-import { AdminRole } from "../../generated/prisma/enums";
+import { AdminRole } from "../../generated/prisma";
 
 export class AdminService {
   async register(

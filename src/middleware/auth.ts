@@ -1,7 +1,7 @@
 import { Response, NextFunction } from "express";
 import { verifyToken } from "../utils/jwt";
 import { AuthRequest } from "../types";
-import { AdminRole } from "../generated/prisma/enums";
+import { AdminRole } from "../generated/prisma";
 
 
 export const authenticate = (

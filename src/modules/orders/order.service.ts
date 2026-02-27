@@ -3,7 +3,7 @@ import { AppError } from "../../utils/error";
 import { CreateOrderDTO, OrderFilterQuery } from "../../types";
 import { generateOrderNumber, generateQRCode, calculateShippingFee, calculateTax, paginate, createPaginationMeta, isSalesActive } from "../../utils/helper";
 import { sendOrderConfirmation, sendTicketConfirmation, sendRefundConfirmation } from "../../utils/email";
-import { OrderStatus, PaymentStatus } from "../../generated/prisma/enums";
+import { OrderStatus, PaymentStatus } from "../../generated/prisma";
 
 
 
