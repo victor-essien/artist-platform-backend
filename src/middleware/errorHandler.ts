@@ -29,15 +29,25 @@ export const errorHandler = (
     return;
   }
 
-  // Handle Prisma errors
   if (err.name === 'PrismaClientKnownRequestError') {
-    logger.error(`Database error: ${err.message}`);
-    res.status(400).json({
-      error: 'Database operation failed',
-      status: 400,
-    });
-    return;
-  }
+  console.log("Prisma Error Code:", err);
+  console.log("Prisma Error Message:", err.message);
+
+  res.status(400).json({
+    error: err.message,
+    status: 400,
+  });
+  return;
+}
+  // Handle Prisma errors
+//   if (err.name === 'PrismaClientKnownRequestError') {
+//     logger.error(`Database error: ${err.message}`);
+//     res.status(400).json({
+//       error: 'Database operation failed',
+//       status: 400,
+//     });
+//     return;
+//   }
 
   // Handle validation errors
   if (err.name === 'ValidationError') {
