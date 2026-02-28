@@ -65,6 +65,7 @@ export interface CreateTicketTypeDTO {
     description?: string;
     price: number;
     quantity: number;
+    imageUrl?: string;
     maxPerOrder?: number;
     salesStart?: Date;
     salesEnd?: Date;

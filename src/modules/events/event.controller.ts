@@ -10,7 +10,11 @@ export class EventController {
     try {
       const event = await eventService.createEvent(req.body, req.admin!.id);
       res.status(201).json({ success: true, data: event });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Prisma Error:", error);
+  console.error("Code:", error.code);
+  console.error("Meta:", error.meta);
+      console.log('ERROR', error)
       next(error);
     }
   }

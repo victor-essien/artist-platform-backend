@@ -9,38 +9,40 @@ import {
 import { EventStatus } from "../../generated/prisma";
 
 export class EventService {
-  async createEvent(data: CreateEventDTO, createdById: string) {
-    const { ticketTypes, ...eventData } = data;
-    const event = await prisma.event.create({
-      data: {
-        ...eventData,
-        createdById,
-        ticketTypes: {
-          create: ticketTypes.map((tt) => ({
-            name: tt.name,
-            description: tt.description ?? null,
-            price: tt.price,
-            quantity: tt.quantity,
-            maxPerOrder: tt.maxPerOrder || 10,
-            salesStart: tt.salesStart ?? null,
-            salesEnd: tt.salesEnd ?? null,
-          })),
-        },
-      },
-      include: {
-        ticketTypes: true,
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
+async createEvent(data: CreateEventDTO, createdById: string) {
+  const { ticketTypes, ...eventData } = data;
+  console.log('ticket', ticketTypes),
+  console.log(eventData)
+  const createData: any = {
+    ...eventData,
+    createdById,
+  };
 
-    return event;
+  if (ticketTypes?.length) {
+    createData.ticketTypes = {
+      create: ticketTypes.map((ticket) => ({
+        name: ticket.name,
+        description: ticket.description,
+        price: ticket.price,
+        quantity: ticket.quantity,
+        imageUrl: ticket.imageUrl,
+        maxPerOrder: ticket.maxPerOrder,
+        salesStart: ticket.salesStart,
+        salesEnd: ticket.salesEnd,
+      })),
+    };
   }
+
+ 
+  const event = await prisma.event.create({
+    data: createData,
+   include: {
+    ticketTypes: true
+   }
+  });
+ console.log(event)
+  return event;
+}
 
   async getEvents(query: EventFilterQuery) {
     const page = parseInt(query.page || "1");
