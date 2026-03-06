@@ -28,9 +28,8 @@ info:
     url: https://opensource.org/licenses/MIT
 
 servers:
-  - url: http://localhost:3000/api
-    description: Development server
-  - url: https://api.artistplatform.com/api
+ 
+  - url: https://tiime-artist-platform.onrender.com/api
     description: Production server
 
 tags:

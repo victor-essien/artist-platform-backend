@@ -8,6 +8,7 @@ import eventRouter from './modules/events/event.routes';
 import productRouter from './modules/products/product.routes';
 import orderRouter from './modules/orders/order.routes';
 import analyticsRouter from './modules/analytics/analytics.routes';
+import uploadRouter from './modules/upload/upload.routes';
 import { errorHandler, notFound } from './middleware/errorHandler';
 const app = express();
 
@@ -49,6 +50,7 @@ app.use('/api/events', eventRouter);
 app.use('/api/products', productRouter);
 app.use('/api/orders', orderRouter);
 app.use('/api/analytics', analyticsRouter);
+app.use('/api/upload', uploadRouter);
 
 app.use(notFound);
 app.use(errorHandler);
