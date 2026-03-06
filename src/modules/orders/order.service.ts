@@ -1,11 +1,24 @@
 import { prisma } from "../../config/database";
 import { AppError } from "../../utils/error";
 import { CreateOrderDTO, OrderFilterQuery } from "../../types";
-import { generateOrderNumber, generateQRCode, calculateShippingFee, calculateTax, paginate, createPaginationMeta, isSalesActive } from "../../utils/helper";
-import { sendOrderConfirmation, sendTicketConfirmation, sendRefundConfirmation } from "../../utils/email";
+import {
+  generateOrderNumber,
+  generateQRCode,
+  calculateShippingFee,
+  calculateTax,
+  paginate,
+  createPaginationMeta,
+  isSalesActive,
+} from "../../utils/helper";
+import {
+  sendOrderConfirmation,
+  sendTicketConfirmation,
+  sendRefundConfirmation,
+} from "../../utils/email";
 import { OrderStatus, PaymentStatus } from "../../generated/prisma";
-
-
+import { generateTicketPDF } from "../../utils/generateTicketPDF";
+import { ticketEmailTemplate } from "../../utils/ticketEmail";
+import { sendTicketEmail } from "../../services/email.service";
 
 export class OrderService {
   async createOrder(data: CreateOrderDTO) {
@@ -22,7 +35,7 @@ export class OrderService {
         });
 
         if (!product || !product.isActive) {
-          throw new AppError('Product not found or inactive', 404);
+          throw new AppError("Product not found or inactive", 404);
         }
 
         // Check stock
@@ -49,7 +62,7 @@ export class OrderService {
         const totalWeight = await this.calculateTotalWeight(data.items);
         shippingFee = calculateShippingFee(
           totalWeight,
-          data.shippingAddress.country
+          data.shippingAddress.country,
         );
       }
     }
@@ -57,7 +70,7 @@ export class OrderService {
     // Validate and calculate for tickets
     if (data.tickets && data.tickets.length > 0) {
       if (!data.eventId) {
-        throw new AppError('Event ID required for ticket purchase', 400);
+        throw new AppError("Event ID required for ticket purchase", 400);
       }
 
       const event = await prisma.event.findUnique({
@@ -65,24 +78,24 @@ export class OrderService {
         include: { ticketTypes: true },
       });
 
-      if (!event || event.status !== 'PUBLISHED') {
-        throw new AppError('Event not available', 404);
+      if (!event || event.status !== "PUBLISHED") {
+        throw new AppError("Event not available", 404);
       }
 
       for (const ticket of data.tickets) {
         const ticketType = event.ticketTypes.find(
-          (tt) => tt.id === ticket.ticketTypeId
+          (tt) => tt.id === ticket.ticketTypeId,
         );
 
         if (!ticketType || !ticketType.isActive) {
-          throw new AppError('Ticket type not found or inactive', 404);
+          throw new AppError("Ticket type not found or inactive", 404);
         }
 
         // Check sales period
         if (!isSalesActive(ticketType.salesStart, ticketType.salesEnd)) {
           throw new AppError(
             `Sales for ${ticketType.name} are not active`,
-            400
+            400,
           );
         }
 
@@ -91,7 +104,7 @@ export class OrderService {
         if (available < ticket.quantity) {
           throw new AppError(
             `Only ${available} tickets available for ${ticketType.name}`,
-            400
+            400,
           );
         }
 
@@ -99,7 +112,7 @@ export class OrderService {
         if (ticket.quantity > ticketType.maxPerOrder) {
           throw new AppError(
             `Maximum ${ticketType.maxPerOrder} tickets per order for ${ticketType.name}`,
-            400
+            400,
           );
         }
 
@@ -129,8 +142,8 @@ export class OrderService {
         tax,
         total,
         paymentMethod: data.paymentMethod,
-        status: 'PENDING',
-        paymentStatus: 'PENDING',
+        status: "PENDING",
+        paymentStatus: "PENDING",
       };
 
       if (data.eventId) {
@@ -149,7 +162,7 @@ export class OrderService {
           });
 
           if (!product) {
-            throw new AppError('Product not found', 404);
+            throw new AppError("Product not found", 404);
           }
 
           let price = product.price;
@@ -195,7 +208,7 @@ export class OrderService {
                 orderId: newOrder.id,
                 ticketTypeId: ticket.ticketTypeId,
                 qrCode: generateQRCode(),
-                status: 'VALID',
+                status: "VALID",
               },
             });
           }
@@ -213,15 +226,15 @@ export class OrderService {
 
     // Send confirmation email (non-blocking)
     this.sendOrderEmail(order.id).catch((err) =>
-      console.error('Failed to send email:', err)
+      console.error("Failed to send email:", err),
     );
 
     return order;
   }
 
   async getOrders(query: OrderFilterQuery) {
-    const page = parseInt(query.page || '1');
-    const limit = parseInt(query.limit || '20');
+    const page = parseInt(query.page || "1");
+    const limit = parseInt(query.limit || "20");
     const { skip, take } = paginate(page, limit);
 
     const where: any = {};
@@ -237,7 +250,7 @@ export class OrderService {
     if (query.customerEmail) {
       where.customerEmail = {
         contains: query.customerEmail,
-        mode: 'insensitive',
+        mode: "insensitive",
       };
     }
 
@@ -286,7 +299,7 @@ export class OrderService {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       }),
       prisma.order.count({ where }),
     ]);
@@ -318,7 +331,7 @@ export class OrderService {
     });
 
     if (!order) {
-      throw new AppError('Order not found', 404);
+      throw new AppError("Order not found", 404);
     }
 
     return order;
@@ -344,7 +357,7 @@ export class OrderService {
     });
 
     if (!order) {
-      throw new AppError('Order not found', 404);
+      throw new AppError("Order not found", 404);
     }
 
     return order;
@@ -363,9 +376,9 @@ export class OrderService {
     const order = await prisma.order.update({
       where: { id: orderId },
       data: {
-        paymentStatus: 'COMPLETED',
+        paymentStatus: "COMPLETED",
         paymentIntentId,
-        status: 'CONFIRMED',
+        status: "CONFIRMED",
       },
     });
 
@@ -373,9 +386,9 @@ export class OrderService {
       data: {
         orderId,
         amount: order.total,
-        paymentMethod: order.paymentMethod || 'stripe',
+        paymentMethod: order.paymentMethod || "stripe",
         transactionId: paymentIntentId,
-        status: 'COMPLETED',
+        status: "COMPLETED",
       },
     });
 
@@ -392,24 +405,24 @@ export class OrderService {
     });
 
     if (!order) {
-      throw new AppError('Order not found', 404);
+      throw new AppError("Order not found", 404);
     }
 
-    if (order.status === 'REFUNDED') {
-      throw new AppError('Order already refunded', 400);
+    if (order.status === "REFUNDED") {
+      throw new AppError("Order already refunded", 400);
     }
 
     await prisma.$transaction([
       prisma.order.update({
         where: { id },
         data: {
-          status: 'REFUNDED',
-          paymentStatus: 'REFUNDED',
+          status: "REFUNDED",
+          paymentStatus: "REFUNDED",
         },
       }),
       prisma.ticket.updateMany({
         where: { orderId: id },
-        data: { status: 'REFUNDED' },
+        data: { status: "REFUNDED" },
       }),
     ]);
 
@@ -440,8 +453,8 @@ export class OrderService {
     sendRefundConfirmation(
       order.customerEmail,
       order.orderNumber,
-      parseFloat(order.total.toString())
-    ).catch((err) => console.error('Failed to send email:', err));
+      parseFloat(order.total.toString()),
+    ).catch((err) => console.error("Failed to send email:", err));
 
     return order;
   }
@@ -465,13 +478,36 @@ export class OrderService {
   private async sendOrderEmail(orderId: string) {
     const order = await this.getOrderById(orderId);
 
-    if (order.orderType === 'TICKET' && order.event) {
-      await sendTicketConfirmation(
-        order.customerEmail,
-        order.orderNumber,
-        order.event,
-        order.tickets.length
+    if (order.orderType === "TICKET" && order.event) {
+      const eventdate = new Date(order.event.date).toLocaleDateString()!!;
+      const attachments = await Promise.all(
+        order.tickets.map(async (ticket, i) => {
+          const pdf = await generateTicketPDF({
+            buyerName: order.customerName,
+            eventName: order.event?.title,
+            eventDate: eventdate,
+            ticketCode: ticket.qrCode,
+          });
+
+          return {
+            filename: `ticket-${order.event?.title}${i}.pdf`,
+            content: pdf,
+          };
+        }),
       );
+
+      const html = ticketEmailTemplate(
+        order.customerName,
+        order.event.title,
+        order.event.imageUrl ?? "",
+      );
+
+      await sendTicketEmail({
+        email: order.customerEmail,
+        subject: `Your Tickets for ${order.event.title}`,
+        html,
+        attachments,
+      });
     } else {
       await sendOrderConfirmation(order.customerEmail, order.orderNumber, {
         total: parseFloat(order.total.toString()),
@@ -505,7 +541,7 @@ export class OrderService {
         },
         tickets: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     return orders;
