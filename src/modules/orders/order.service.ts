@@ -141,7 +141,7 @@ export class OrderService {
         shippingFee,
         tax,
         total,
-        paymentMethod: data.paymentMethod,
+        paymentMethod: 'paystack',
         status: "PENDING",
         paymentStatus: "PENDING",
       };
@@ -386,7 +386,7 @@ export class OrderService {
       data: {
         orderId,
         amount: order.total,
-        paymentMethod: order.paymentMethod || "stripe",
+        paymentMethod: order.paymentMethod || "paystack",
         transactionId: paymentIntentId,
         status: "COMPLETED",
       },
@@ -484,7 +484,10 @@ export class OrderService {
         order.tickets.map(async (ticket, i) => {
           const pdf = await generateTicketPDF({
             buyerName: order.customerName,
-            eventName: order.event?.title,
+            eventName: order.event?.title!,
+            city: order.event?.city!,
+            startTime: order.event?.startTime!,
+            // ticketType: ticket.ticketType?.name,
             eventDate: eventdate,
             ticketCode: ticket.qrCode,
           });
