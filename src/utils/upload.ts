@@ -46,3 +46,46 @@ export const uploadSingle = upload.single('image');
 
 // Multiple files upload middleware
 export const uploadMultiple = upload.array('images', 5); // Max 5 images
+// Audio file upload (larger size limit)
+export const uploadAudio = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    const allowedAudioTypes = [
+      'audio/mpeg',      // MP3
+      'audio/mp3',       // MP3
+      'audio/wav',       // WAV
+      'audio/x-wav',     // WAV
+      'audio/wave',      // WAV
+      'audio/flac',      // FLAC
+      'audio/x-flac',    // FLAC
+      'audio/mp4',       // M4A
+      'audio/x-m4a',     // M4A
+      'audio/aac',       // AAC
+    ];
+
+    if (allowedAudioTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(
+        new AppError(
+          'Invalid file type. Only audio files (MP3, WAV, FLAC, M4A, AAC) are allowed.',
+          400
+        ) as any
+      );
+    }
+  },
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit for audio files
+  },
+});
+
+// Upload song with optional cover image
+export const uploadSongFiles = multer({
+  storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+  },
+}).fields([
+  { name: 'audio', maxCount: 1 },
+  { name: 'cover', maxCount: 1 },
+]);
